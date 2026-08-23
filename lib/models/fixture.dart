@@ -5,8 +5,11 @@ class Fixture {
   final int id;
   final DateTime? dateTime;
   final String homeTeam;
+  final String? homeTeamLogo;
   final String awayTeam;
+  final String? awayTeamLogo;
   final String league;
+  final int? leagueId;
   final String? status;
   final int? homeScore;
   final int? awayScore;
@@ -16,8 +19,11 @@ class Fixture {
     required this.id,
     required this.dateTime,
     required this.homeTeam,
+    this.homeTeamLogo,
     required this.awayTeam,
+    this.awayTeamLogo,
     required this.league,
+    this.leagueId,
     this.status,
     this.homeScore,
     this.awayScore,
@@ -46,8 +52,11 @@ class Fixture {
       id: fixtureJson?['id'] as int? ?? 0,
       dateTime: parsedDate,
       homeTeam: homeTeamJson?['name'] as String? ?? 'TBD',
+      homeTeamLogo: homeTeamJson?['logo'] as String?,
       awayTeam: awayTeamJson?['name'] as String? ?? 'TBD',
+      awayTeamLogo: awayTeamJson?['logo'] as String?,
       league: leagueJson?['name'] as String? ?? 'Unknown League',
+      leagueId: leagueJson?['id'] as int?,
       status: statusJson?['short'] as String?,
       homeScore: goalsJson?['home'] as int?,
       awayScore: goalsJson?['away'] as int?,

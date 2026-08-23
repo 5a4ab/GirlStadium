@@ -5,7 +5,12 @@ import '../models/fixture.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
 import '../widgets/fixture_card.dart';
+import '../widgets/segmented_control.dart';
 import 'match_details_screen.dart';
+
+// The date options shown on the Fixtures screen, matching exactly
+// what the current API plan supports (yesterday, today, tomorrow).
+const List<String> _dateOptions = ['Yesterday', 'Today', 'Tomorrow'];
 
 class FixturesScreen extends StatefulWidget {
   const FixturesScreen({super.key});
@@ -31,6 +36,14 @@ class _FixturesScreenState extends State<FixturesScreen> {
   // Loading / error / data state for the fixtures request.
   bool _isLoading = true;
   String? _errorMessage;
+
+  // All fixtures returned for the currently selected date, across every
+  // league. Kept around so switching leagues can filter locally instead
+  // of making another request.
+  List<Fixture> _rawFixtures = [];
+
+  // The fixtures actually shown: `_rawFixtures` filtered down to the
+  // currently selected league.
   List<Fixture> _fixtures = [];
 
   @override
@@ -39,12 +52,23 @@ class _FixturesScreenState extends State<FixturesScreen> {
     _loadFixtures();
   }
 
-  // Works out the football season year expected by the API.
-  // A season is identified by the year it starts in (e.g. 2025 for
-  // the 2025-2026 season). Seasons typically start around July.
-  int _currentSeason() {
+  // Keeps only the fixtures that belong to the currently selected
+  // league, matched by API-Football league ID (not display name).
+  List<Fixture> _filterByLeague(List<Fixture> fixtures) {
+    final leagueId = _leagueIds[_selectedLeague];
+    return fixtures.where((fixture) => fixture.leagueId == leagueId).toList();
+  }
+
+  // Resolves the DateTime for the currently selected date chip.
+  DateTime _resolveSelectedDate() {
     final now = DateTime.now();
-    return now.month >= 7 ? now.year : now.year - 1;
+    if (_selectedDate == 'Yesterday') {
+      return now.subtract(const Duration(days: 1));
+    }
+    if (_selectedDate == 'Tomorrow') {
+      return now.add(const Duration(days: 1));
+    }
+    return now;
   }
 
   // Formats a DateTime as 'YYYY-MM-DD', which is what the API expects.
@@ -55,8 +79,14 @@ class _FixturesScreenState extends State<FixturesScreen> {
     return '$year-$month-$day';
   }
 
-  // Requests fixtures from the API based on the currently selected
-  // date option and league.
+  // Requests fixtures from the API for the currently selected date.
+  //
+  // Sends only `date` - no `league` and no `season`. API-Football's
+  // Free plan rejects the current (2026) season when filtering by
+  // league, but a plain date-only request still returns every
+  // fixture for that day across all leagues. League filtering is
+  // then done locally in `_filterByLeague`, so switching leagues
+  // never needs another request.
   Future<void> _loadFixtures() async {
     setState(() {
       _isLoading = true;
@@ -64,37 +94,14 @@ class _FixturesScreenState extends State<FixturesScreen> {
     });
 
     try {
-      final now = DateTime.now();
-      final leagueId = _leagueIds[_selectedLeague];
-      final season = _currentSeason();
-
-      List<Fixture> result;
-
-      if (_selectedDate == 'Yesterday') {
-        final yesterday = now.subtract(const Duration(days: 1));
-        result = await _footballService.getFixtures(
-          date: _formatDate(yesterday),
-          leagueId: leagueId,
-          season: season,
-        );
-      } else if (_selectedDate == 'Today') {
-        result = await _footballService.getFixtures(
-          date: _formatDate(now),
-          leagueId: leagueId,
-          season: season,
-        );
-      } else {
-        // Tomorrow.
-        final tomorrow = now.add(const Duration(days: 1));
-        result = await _footballService.getFixtures(
-          date: _formatDate(tomorrow),
-          leagueId: leagueId,
-          season: season,
-        );
-      }
+      final date = _resolveSelectedDate();
+      final result = await _footballService.getFixtures(
+        date: _formatDate(date),
+      );
 
       setState(() {
-        _fixtures = result;
+        _rawFixtures = result;
+        _fixtures = _filterByLeague(result);
         _isLoading = false;
       });
     } catch (error) {
@@ -116,50 +123,33 @@ class _FixturesScreenState extends State<FixturesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Screen title with a search icon.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Fixtures',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: AppColors.textPrimary,
-                      size: 22,
-                    ),
-                  ),
-                ],
+            // Screen title.
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Text(
+                'Fixtures',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
 
-            // Date selector chips.
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _buildDateChip('Yesterday'),
-                  const SizedBox(width: 10),
-                  _buildDateChip('Today'),
-                  const SizedBox(width: 10),
-                  _buildDateChip('Tomorrow'),
-                ],
+            // Date selector: a full-width segmented control for
+            // Yesterday / Today / Tomorrow.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SegmentedControl(
+                options: _dateOptions,
+                selected: _selectedDate,
+                onSelected: (label) {
+                  if (label == _selectedDate) return;
+                  setState(() {
+                    _selectedDate = label;
+                  });
+                  _loadFixtures();
+                },
               ),
             ),
 
@@ -170,10 +160,13 @@ class _FixturesScreenState extends State<FixturesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: PopupMenuButton<String>(
                 onSelected: (value) {
+                  // League changes are filtered locally from the
+                  // fixtures already loaded for the selected date -
+                  // no new API request.
                   setState(() {
                     _selectedLeague = value;
+                    _fixtures = _filterByLeague(_rawFixtures);
                   });
-                  _loadFixtures();
                 },
                 color: AppColors.card,
                 shape: RoundedRectangleBorder(
@@ -195,16 +188,24 @@ class _FixturesScreenState extends State<FixturesScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.surface),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _selectedLeague,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                      const Icon(
+                        Icons.emoji_events_outlined,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selectedLeague,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const Icon(
@@ -309,22 +310,6 @@ class _FixturesScreenState extends State<FixturesScreen> {
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              onPressed: () {
-                // No functionality yet - the date chips and league
-                // dropdown above already let the user try another
-                // date or league.
-              },
-              child: const Text('Try Another Date'),
-            ),
           ],
         ),
       );
@@ -333,10 +318,7 @@ class _FixturesScreenState extends State<FixturesScreen> {
     return Column(
       children: _fixtures.map((fixture) {
         return FixtureCard(
-          leagueName: fixture.league,
-          homeTeam: fixture.homeTeam,
-          awayTeam: fixture.awayTeam,
-          time: fixture.formattedTime,
+          fixture: fixture,
           onTap: () {
             Navigator.push(
               context,
@@ -349,33 +331,6 @@ class _FixturesScreenState extends State<FixturesScreen> {
           },
         );
       }).toList(),
-    );
-  }
-
-  // Builds one date chip (Yesterday / Today / Tomorrow).
-  Widget _buildDateChip(String label) {
-    final bool isSelected = _selectedDate == label;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) {
-        setState(() {
-          _selectedDate = label;
-        });
-        _loadFixtures();
-      },
-      backgroundColor: AppColors.card,
-      selectedColor: AppColors.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-        fontWeight: FontWeight.w600,
-        fontSize: 13,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide.none,
-      ),
-      showCheckmark: false,
     );
   }
 }

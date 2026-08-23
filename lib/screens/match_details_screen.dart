@@ -3,7 +3,15 @@ import '../theme/app_colors.dart';
 import '../models/match_details.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
+import '../widgets/segmented_control.dart';
 import '../widgets/stat_bar.dart';
+
+const List<String> _matchTabs = ['Overview', 'Statistics', 'Events'];
+
+const List<String> _monthAbbreviations = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
 class MatchDetailsScreen extends StatefulWidget {
   // The fixture to load details for. When null (e.g. a sample card
@@ -23,6 +31,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   MatchDetails? _matchDetails;
+
+  // Which tab is currently selected. Purely local UI state - switching
+  // tabs never triggers another API request, it just changes which
+  // widget is built from the data already loaded above.
+  String _selectedTab = 'Overview';
 
   @override
   void initState() {
@@ -138,49 +151,18 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
 
           const SizedBox(height: 20),
 
-          // Tabs (visual only, Overview is active).
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                _buildTab('Overview', isActive: true),
-                _buildTab('Statistics', isActive: false),
-                _buildTab('Events', isActive: false),
-              ],
-            ),
+          // Overview / Statistics / Events - a real segmented control.
+          // Switching tabs only changes which widget below is built;
+          // it never re-fetches match data.
+          SegmentedControl(
+            options: _matchTabs,
+            selected: _selectedTab,
+            onSelected: (tab) => setState(() => _selectedTab = tab),
           ),
 
           const SizedBox(height: 20),
 
-          // Match Statistics section.
-          const Text(
-            'Match Stats',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildStatsCard(match),
-
-          const SizedBox(height: 24),
-
-          // Match Events section.
-          const Text(
-            'Match Events',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildEventsCard(match),
+          _buildTabContent(match),
 
           const SizedBox(height: 20),
         ],
@@ -245,9 +227,107 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     );
   }
 
-  // Builds the match header card (league, score, status, venue).
+  // Picks which tab's content to show below the segmented control.
+  // Reuses the already-loaded `match` - no branch here ever triggers
+  // an API request.
+  Widget _buildTabContent(MatchDetails match) {
+    switch (_selectedTab) {
+      case 'Statistics':
+        return _buildStatsCard(match);
+      case 'Events':
+        return _buildEventsCard(match);
+      case 'Overview':
+      default:
+        return _buildOverviewTab(match);
+    }
+  }
+
+  // The Overview tab: a short match-info summary (kickoff, venue,
+  // competition) rather than a repeat of the Statistics/Events tabs.
+  Widget _buildOverviewTab(MatchDetails match) {
+    final rows = <Widget>[
+      _infoRow(Icons.emoji_events_outlined, 'Competition', match.leagueName),
+    ];
+
+    if (match.date != null) {
+      rows.add(_infoRow(
+        Icons.calendar_today_outlined,
+        'Kickoff',
+        _formatFullDateTime(match.date!),
+      ));
+    }
+
+    if (match.venue != null) {
+      rows.add(_infoRow(Icons.stadium_outlined, 'Venue', match.venue!));
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < rows.length; i++) ...[
+            rows[i],
+            if (i != rows.length - 1) const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.textSecondary, size: 18),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Formats a full kickoff date/time, e.g. "24 Aug 2026 · 20:00".
+  String _formatFullDateTime(DateTime date) {
+    final local = date.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = _monthAbbreviations[local.month - 1];
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day $month ${local.year} · $hour:$minute';
+  }
+
+  // Builds the match header card: league, both teams with logos, the
+  // score (or kickoff time for matches that haven't started), status,
+  // and venue.
   Widget _buildHeaderCard(MatchDetails match) {
     final isLive = match.isLive;
+    final bool showScore = match.status != 'NS' &&
+        match.homeScore != null &&
+        match.awayScore != null;
 
     return Container(
       width: double.infinity,
@@ -261,11 +341,20 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                match.leagueName,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
+              if (match.leagueLogo != null) ...[
+                _buildLogo(match.leagueLogo, size: 18),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Text(
+                  match.leagueName,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ),
               if (isLive) ...[
@@ -291,44 +380,68 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
               ],
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            '${match.homeTeamName} vs ${match.awayTeamName}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${match.homeScoreDisplay} - ${match.awayScoreDisplay}',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: (isLive ? AppColors.success : AppColors.primary)
-                  .withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              match.statusLabel,
-              style: TextStyle(
-                color: isLive ? AppColors.success : AppColors.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildTeamColumn(match.homeTeamLogo, match.homeTeamName),
               ),
-            ),
+              SizedBox(
+                width: 96,
+                child: Column(
+                  children: [
+                    if (showScore)
+                      Text(
+                        '${match.homeScoreDisplay} - ${match.awayScoreDisplay}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    else
+                      Text(
+                        match.statusLabel,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    if (showScore) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (isLive ? AppColors.success : AppColors.primary)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          match.statusLabel,
+                          style: TextStyle(
+                            color: isLive ? AppColors.success : AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _buildTeamColumn(match.awayTeamLogo, match.awayTeamName),
+              ),
+            ],
           ),
           if (match.venue != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -338,11 +451,15 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                   size: 16,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  match.venue!,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
+                Flexible(
+                  child: Text(
+                    match.venue!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -353,21 +470,66 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     );
   }
 
-  // Builds the Match Stats card using real statistics when available.
+  // One team's logo + name, stacked, used on both sides of the header.
+  Widget _buildTeamColumn(String? logoUrl, String name) {
+    return Column(
+      children: [
+        _buildLogo(logoUrl, size: 48),
+        const SizedBox(height: 8),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // A circular team/league badge. Falls back to a placeholder icon
+  // when there's no logo URL or the image fails to load.
+  Widget _buildLogo(String? url, {required double size}) {
+    Widget placeholder() => Container(
+          width: size,
+          height: size,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.shield_outlined,
+            size: size * 0.5,
+            color: AppColors.textSecondary,
+          ),
+        );
+
+    if (url == null || url.isEmpty) {
+      return placeholder();
+    }
+
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : placeholder(),
+        errorBuilder: (context, error, stackTrace) => placeholder(),
+      ),
+    );
+  }
+
+  // Builds the Statistics tab content using real statistics when
+  // available - a clean empty state otherwise (not an API error).
   Widget _buildStatsCard(MatchDetails match) {
     if (match.statistics.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Text(
-          'No statistics available yet.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-      );
+      return _buildEmptyTabCard("Statistics aren't available for this match yet.");
     }
 
     return Container(
@@ -405,21 +567,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     return double.tryParse(cleaned);
   }
 
-  // Builds the Match Events card using real events when available.
+  // Builds the Events tab content using real events when available -
+  // a clean empty state otherwise (not an API error).
   Widget _buildEventsCard(MatchDetails match) {
     if (match.events.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Text(
-          'No events yet',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-      );
+      return _buildEmptyTabCard('No match events available yet.');
     }
 
     return Container(
@@ -438,10 +590,41 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             minute: event.minute != null ? "${event.minute}'" : '-',
             icon: _iconForEvent(event),
             iconColor: _colorForEvent(event),
-            description: event.playerName ?? event.teamName ?? 'Unknown',
+            title: event.playerName ?? event.teamName ?? 'Unknown',
+            subtitle: _eventSubtitle(event),
             isLast: isLast,
           );
         }),
+      ),
+    );
+  }
+
+  // Builds a short secondary line for an event row from whichever of
+  // team / detail / assist are actually present, e.g.
+  // "Manchester City · Normal Goal · Assist: Kevin De Bruyne".
+  String? _eventSubtitle(MatchEvent event) {
+    final parts = <String>[
+      if (event.teamName != null) event.teamName!,
+      if (event.detail != null) event.detail!,
+      if (event.assistName != null) 'Assist: ${event.assistName}',
+    ];
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
+
+  // A shared empty state for the Statistics/Events tabs - this
+  // represents "nothing to show yet", not an API error.
+  Widget _buildEmptyTabCard(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
       ),
     );
   }
@@ -477,28 +660,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
         return AppColors.textSecondary;
     }
   }
-
-  // Builds one tab item for the visual-only tab bar.
-  Widget _buildTab(String label, {required bool isActive}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // One row in the match events timeline.
@@ -506,14 +667,16 @@ class _EventRow extends StatelessWidget {
   final String minute;
   final IconData icon;
   final Color iconColor;
-  final String description;
+  final String title;
+  final String? subtitle;
   final bool isLast;
 
   const _EventRow({
     required this.minute,
     required this.icon,
     required this.iconColor,
-    required this.description,
+    required this.title,
+    this.subtitle,
     this.isLast = false,
   });
 
@@ -522,6 +685,7 @@ class _EventRow extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 40,
@@ -537,13 +701,28 @@ class _EventRow extends StatelessWidget {
           Icon(icon, color: iconColor, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              description,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

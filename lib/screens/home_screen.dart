@@ -659,10 +659,7 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             ...upcomingFixtures.map((fixture) {
               return FixtureCard(
-                leagueName: fixture.league,
-                homeTeam: fixture.homeTeam,
-                awayTeam: fixture.awayTeam,
-                time: fixture.formattedTime,
+                fixture: fixture,
                 onTap: () {
                   Navigator.push(
                     context,
