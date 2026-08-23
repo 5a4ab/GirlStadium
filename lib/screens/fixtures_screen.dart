@@ -70,25 +70,24 @@ class _FixturesScreenState extends State<FixturesScreen> {
 
       List<Fixture> result;
 
-      if (_selectedDate == 'Today') {
+      if (_selectedDate == 'Yesterday') {
+        final yesterday = now.subtract(const Duration(days: 1));
+        result = await _footballService.getFixtures(
+          date: _formatDate(yesterday),
+          leagueId: leagueId,
+          season: season,
+        );
+      } else if (_selectedDate == 'Today') {
         result = await _footballService.getFixtures(
           date: _formatDate(now),
           leagueId: leagueId,
           season: season,
         );
-      } else if (_selectedDate == 'Tomorrow') {
+      } else {
+        // Tomorrow.
         final tomorrow = now.add(const Duration(days: 1));
         result = await _footballService.getFixtures(
           date: _formatDate(tomorrow),
-          leagueId: leagueId,
-          season: season,
-        );
-      } else {
-        // This Week: request a range covering the next 7 days.
-        final weekEnd = now.add(const Duration(days: 7));
-        result = await _footballService.getFixtures(
-          from: _formatDate(now),
-          to: _formatDate(weekEnd),
           leagueId: leagueId,
           season: season,
         );
@@ -155,11 +154,11 @@ class _FixturesScreenState extends State<FixturesScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
+                  _buildDateChip('Yesterday'),
+                  const SizedBox(width: 10),
                   _buildDateChip('Today'),
                   const SizedBox(width: 10),
                   _buildDateChip('Tomorrow'),
-                  const SizedBox(width: 10),
-                  _buildDateChip('This Week'),
                 ],
               ),
             ),
@@ -353,7 +352,7 @@ class _FixturesScreenState extends State<FixturesScreen> {
     );
   }
 
-  // Builds one date chip (Today / Tomorrow / This Week).
+  // Builds one date chip (Yesterday / Today / Tomorrow).
   Widget _buildDateChip(String label) {
     final bool isSelected = _selectedDate == label;
     return ChoiceChip(
