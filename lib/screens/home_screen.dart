@@ -10,11 +10,16 @@ import '../constants/api_constants.dart';
 import '../constants/lessons_data.dart';
 import '../constants/news_data.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/featured_player_card.dart';
+import '../widgets/home_background.dart';
 import '../widgets/match_card.dart';
 import '../widgets/fixture_card.dart';
 import '../widgets/learn_card.dart';
+import '../widgets/learn_preview_card.dart';
 import '../widgets/news_card.dart';
+import '../widgets/news_preview_card.dart';
+import '../widgets/section_header.dart';
 import 'match_details_screen.dart';
 import 'lesson_details_screen.dart';
 import 'news_details_screen.dart';
@@ -39,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // The player featured on Home. Mohamed Salah's API-Football player
   // ID - only the ID is hardcoded, the rest of the card's content
-  // (name, club, nationality) comes from the real API response.
+  // (name, club, nationality, photo) comes from the real API response.
   static const int _featuredPlayerId = 306;
 
   bool _isFeaturedPlayerLoading = true;
@@ -49,18 +54,24 @@ class _HomeScreenState extends State<HomeScreen> {
   // Local search - filters the local lessons/articles lists only.
   // No API request is involved in searching.
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
+  bool _searchFocused = false;
 
   @override
   void initState() {
     super.initState();
     _loadFixtures();
     _loadFeaturedPlayer();
+    _searchFocusNode.addListener(() {
+      setState(() => _searchFocused = _searchFocusNode.hasFocus);
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -174,191 +185,162 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // App bar with logo and notification icon.
-            const CustomAppBar(),
+    return HomeBackground(
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Brand header.
+              const CustomAppBar(),
 
-            // Greeting section.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Good Evening 👋',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Ready to discover today's football?",
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Search bar. Searches local lessons and news articles only.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search, color: AppColors.textSecondary),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value.trim();
-                          });
-                        },
-                        style: const TextStyle(color: AppColors.textPrimary),
-                        decoration: const InputDecoration(
-                          hintText: 'Search lessons, news...',
-                          hintStyle: TextStyle(color: AppColors.textSecondary),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 14),
-                        ),
+              // Greeting section.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Good Evening 👋',
+                      style: TextStyle(
+                        color: AppColors.textWarm,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (_searchQuery.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _searchController.clear();
-                            _searchQuery = '';
-                          });
-                        },
-                        child: const Icon(
-                          Icons.close,
-                          color: AppColors.textSecondary,
-                          size: 18,
-                        ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Ready to discover today's football?",
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 14,
                       ),
+                    ),
                   ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-            // Search results - only shown while actively searching.
-            // Purely local, no API request.
-            if (_searchQuery.isNotEmpty) ...[
-              _buildSearchResultsSection(),
-              const SizedBox(height: 20),
-            ],
-
-            // Featured Player section. Loads real API data once in
-            // initState(), independent of the fixtures request below.
-            // Not tappable yet - will link to Team Details after API integration.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildFeaturedPlayerSection(),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Football data (Live Matches + Today's Fixtures), backed
-            // by a single /fixtures request loaded once in initState().
-            _buildFootballSection(),
-
-            const SizedBox(height: 12),
-
-            // Learn Football section.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Learn Football',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
+              // Search bar. Searches local lessons and news articles only.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBase,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _searchFocused
+                          ? AppColors.accentPink
+                          : AppColors.borderLavender.withValues(alpha: 0.5),
+                      width: _searchFocused ? 1.4 : 1,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  LearnCard(
-                    title: lessons.first.title,
-                    readTime: lessons.first.readTime,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LessonDetailsScreen(
-                            lesson: lessons.first,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search,
+                        color: _searchFocused
+                            ? AppColors.accentPink
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value.trim();
+                            });
+                          },
+                          style: const TextStyle(color: AppColors.textWarm),
+                          decoration: const InputDecoration(
+                            hintText: 'Search lessons, news...',
+                            hintStyle: TextStyle(color: AppColors.textMuted),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Latest News section.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Latest News',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...articles.take(2).map((article) {
-                    return NewsCard(
-                      title: article.title,
-                      description: article.description,
-                      timeAgo: article.timeAgo,
-                      icon: article.icon,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NewsDetailsScreen(
-                              article: article,
-                            ),
+                      ),
+                      if (_searchQuery.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            color: AppColors.textMuted,
+                            size: 18,
                           ),
-                        );
-                      },
-                    );
-                  }),
-                ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 24),
+
+              // Search results - only shown while actively searching.
+              // Purely local, no API request.
+              if (_searchQuery.isNotEmpty) ...[
+                _buildSearchResultsSection(),
+                const SizedBox(height: 24),
+              ],
+
+              // Football data (Live & Upcoming), backed by a single
+              // /fixtures request loaded once in initState().
+              FadeSlideIn(
+                child: _buildFootballSection(),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Featured Player section. Loads real API data once in
+              // initState(), independent of the fixtures request above.
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 80),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionHeader(
+                        title: 'Featured Player',
+                        icon: Icons.star_rounded,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildFeaturedPlayerSection(),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Learn Football section.
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 140),
+                child: _buildLearnSection(),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Latest News section.
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 200),
+                child: _buildNewsSection(),
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -366,16 +348,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Decides what to show for the Featured Player section: a small
   // loading indicator, a simple fallback message, or the real
-  // FeaturedPlayerCard - all inside the same card-shaped container so
-  // the section's footprint stays stable while loading.
+  // FeaturedPlayerCard - all inside a stable-height container so the
+  // section's footprint stays stable while loading.
   Widget _buildFeaturedPlayerSection() {
     if (_isFeaturedPlayerLoading) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        height: 200,
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceBase,
+          borderRadius: BorderRadius.circular(22),
         ),
         child: const Center(
           child: SizedBox(
@@ -383,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 24,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.primary,
+              color: AppColors.accentPink,
             ),
           ),
         ),
@@ -395,13 +377,13 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceBase,
+          borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
           _featuredPlayerErrorMessage!,
           style: const TextStyle(
-            color: AppColors.textSecondary,
+            color: AppColors.textMuted,
             fontSize: 13,
           ),
         ),
@@ -413,13 +395,13 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceBase,
+          borderRadius: BorderRadius.circular(22),
         ),
         child: const Text(
           'No featured player available right now.',
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: AppColors.textMuted,
             fontSize: 13,
           ),
         ),
@@ -430,12 +412,14 @@ class _HomeScreenState extends State<HomeScreen> {
       playerName: _featuredPlayer!.name,
       clubName: _featuredPlayer!.team ?? '-',
       nationality: _featuredPlayer!.nationality ?? '-',
+      photoUrl: _featuredPlayer!.photo,
     );
   }
 
   // Builds the local search results section, shown only while the
   // search bar has text. Searches lessons and articles only - never
-  // the football API.
+  // the football API. Reuses the shared LearnCard/NewsCard so this
+  // stays consistent with the Learn and News screens.
   Widget _buildSearchResultsSection() {
     final matchingLessons = _matchingLessons;
     final matchingArticles = _matchingArticles;
@@ -445,20 +429,16 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Search Results',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+          const SectionHeader(
+            title: 'Search Results',
+            icon: Icons.search,
           ),
           const SizedBox(height: 12),
           if (matchingLessons.isEmpty && matchingArticles.isEmpty)
             const Text(
               'No results found',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 13,
               ),
             )
@@ -509,14 +489,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Decides what to show for the football data area: a loading
-  // spinner, an error message with a retry button, or the Live
-  // Matches + Today's Fixtures sections built from the same request.
+  // spinner, an error message with a retry button, or the Live &
+  // Upcoming sections built from the same request.
   Widget _buildFootballSection() {
     if (_isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: AppColors.accentPink),
         ),
       );
     }
@@ -536,15 +516,15 @@ class _HomeScreenState extends State<HomeScreen> {
               _errorMessage!,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textPrimary,
+                backgroundColor: AppColors.accentPink,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -557,60 +537,32 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Column(
-      children: [
-        _buildLiveMatchesSection(),
-        const SizedBox(height: 24),
-        _buildFixturesSection(),
-      ],
-    );
-  }
-
-  // Builds the "Live Matches" section from fixtures currently in
-  // progress. Shows a simple empty state when there are none.
-  Widget _buildLiveMatchesSection() {
     final liveFixtures = _liveFixtures;
+    final upcomingFixtures = _upcomingFixtures;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: const Text(
-            'Live Matches',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+          child: SectionHeader(
+            title: 'Live & Upcoming',
+            icon: Icons.bolt_rounded,
+            subtitle: liveFixtures.isEmpty
+                ? "Today's Premier League fixtures"
+                : '${liveFixtures.length} match${liveFixtures.length == 1 ? '' : 'es'} live now',
           ),
         ),
-        const SizedBox(height: 12),
-        if (liveFixtures.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'No live matches right now',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          )
-        else
+        const SizedBox(height: 14),
+        if (liveFixtures.isNotEmpty) ...[
           SizedBox(
-            height: 150,
+            height: 160,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: liveFixtures.map((fixture) {
                 return MatchCard(
-                  leagueName: fixture.league,
-                  homeTeam: fixture.homeTeam,
-                  awayTeam: fixture.awayTeam,
-                  homeScore: fixture.homeScoreDisplay,
-                  awayScore: fixture.awayScoreDisplay,
-                  minute: fixture.minuteLabel,
+                  fixture: fixture,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -625,53 +577,143 @@ class _HomeScreenState extends State<HomeScreen> {
               }).toList(),
             ),
           ),
+          const SizedBox(height: 16),
+        ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: upcomingFixtures.isEmpty
+              ? const Text(
+                  'No upcoming fixtures',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                  ),
+                )
+              : Column(
+                  children: upcomingFixtures.map((fixture) {
+                    return FixtureCard(
+                      fixture: fixture,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MatchDetailsScreen(
+                              fixtureId: fixture.id,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }).toList(),
+                ),
+        ),
       ],
     );
   }
 
-  // Builds the "Today's Fixtures" section from fixtures that haven't
-  // started yet. Shows a simple empty state when there are none.
-  Widget _buildFixturesSection() {
-    final upcomingFixtures = _upcomingFixtures;
+  // Builds the "Learn Football" preview: the first few lessons shown
+  // as a horizontally scrollable row of richer cards. Purely local
+  // data (lessons_data.dart) - no API request.
+  Widget _buildLearnSection() {
+    final previewLessons = lessons.take(3).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: SectionHeader(
+            title: 'Learn Football',
+            icon: Icons.menu_book_rounded,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 172,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: previewLessons.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final lesson = previewLessons[index];
+              return LearnPreviewCard(
+                title: lesson.title,
+                category: lesson.category,
+                readTime: lesson.readTime,
+                icon: lesson.icon,
+                gradient: AppColors.accentGradientForIndex(index),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LessonDetailsScreen(lesson: lesson),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Builds the "Latest News" preview: the first article as one large
+  // featured story and the next two as smaller supporting cards.
+  // Purely local data (news_data.dart) - no additional GNews request.
+  Widget _buildNewsSection() {
+    if (articles.isEmpty) return const SizedBox.shrink();
+
+    final featured = articles.first;
+    final supporting = articles.skip(1).take(2).toList();
+
+    void openArticle(Article article) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NewsDetailsScreen(article: article),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Today's Fixtures",
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+          const SectionHeader(
+            title: 'Latest Stories',
+            icon: Icons.newspaper_rounded,
           ),
           const SizedBox(height: 12),
-          if (upcomingFixtures.isEmpty)
-            const Text(
-              'No upcoming fixtures',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            )
-          else
-            ...upcomingFixtures.map((fixture) {
-              return FixtureCard(
-                fixture: fixture,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MatchDetailsScreen(
-                        fixtureId: fixture.id,
-                      ),
-                    ),
-                  );
-                },
+          FeaturedNewsCard(
+            title: featured.title,
+            category: featured.category,
+            timeAgo: featured.timeAgo,
+            icon: featured.icon,
+            gradient: AppColors.accentGradientForIndex(0),
+            onTap: () => openArticle(featured),
+          ),
+          if (supporting.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ...List.generate(supporting.length, (index) {
+              final article = supporting[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == supporting.length - 1 ? 0 : 10,
+                ),
+                child: NewsPreviewCard(
+                  title: article.title,
+                  category: article.category,
+                  timeAgo: article.timeAgo,
+                  icon: article.icon,
+                  gradient: AppColors.accentGradientForIndex(index + 1),
+                  onTap: () => openArticle(article),
+                ),
               );
             }),
+          ],
         ],
       ),
     );

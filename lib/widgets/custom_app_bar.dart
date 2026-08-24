@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-// A simple reusable app bar used at the top of the Home screen.
-// Shows the app name on the left and a notification icon on the right.
+// GirlStadium's brand header: a small gradient mark plus wordmark.
+// Currently only used on Home.
 class CustomAppBar extends StatelessWidget {
   const CustomAppBar({super.key});
 
@@ -11,27 +11,35 @@ class CustomAppBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: AppColors.heroGradient),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentPink.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.sports_soccer,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
           const Text(
             'GirlStadium',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
+              color: AppColors.textWarm,
+              fontSize: 21,
               fontWeight: FontWeight.bold,
-            ),
-          ),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: AppColors.textPrimary,
-              size: 22,
+              letterSpacing: 0.2,
             ),
           ),
         ],
