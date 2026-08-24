@@ -4,6 +4,7 @@ import '../models/team.dart';
 import '../models/player.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
+import '../widgets/app_back_button.dart';
 import '../widgets/player_card.dart';
 import 'team_squad_screen.dart';
 
@@ -86,20 +87,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-        ),
-        title: const Text(
-          'Team Details',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-        ),
+        leading: const AppBackButton(),
+        title: const Text('Team Details'),
       ),
       body: SafeArea(child: _buildBody()),
     );

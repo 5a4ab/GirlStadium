@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../models/article.dart';
+import '../widgets/app_back_button.dart';
 
 class NewsDetailsScreen extends StatelessWidget {
   final Article article;
@@ -30,20 +31,9 @@ class NewsDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-        ),
-        title: const Text(
-          'News',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-        ),
+        leading: const AppBackButton(),
+        title: const Text('News'),
         actions: [
           IconButton(
             onPressed: () {

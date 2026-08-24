@@ -7,7 +7,10 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
+      // The redesigned deep navy/purple background, shared by every
+      // screen's Scaffold unless it paints its own full-bleed
+      // background (Home does, via HomeBackground).
+      scaffoldBackgroundColor: AppColors.deepBackground,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
@@ -22,24 +25,29 @@ class AppTheme {
         bodyLarge: TextStyle(color: AppColors.textPrimary),
         bodyMedium: TextStyle(color: AppColors.textSecondary),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primary.withOpacity(0.2),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            );
-          }
-          return const TextStyle(color: AppColors.textSecondary);
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.primary);
-          }
-          return const IconThemeData(color: AppColors.textSecondary);
-        }),
+      // Shared app-bar language for detail screens: transparent so
+      // the deep background shows through, warm-white title/icons,
+      // no default Material elevation/tint.
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textWarm),
+        titleTextStyle: TextStyle(
+          color: AppColors.textWarm,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      // A safe dark-surface default for any popup/dropdown menu that
+      // doesn't already set its own color explicitly.
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.surfaceElevated,
+        textStyle: const TextStyle(color: AppColors.textWarm, fontSize: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: AppColors.borderLavender.withValues(alpha: 0.4)),
+        ),
       ),
     );
   }

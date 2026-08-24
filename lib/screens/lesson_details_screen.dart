@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/lesson.dart';
+import '../widgets/app_back_button.dart';
 
 class LessonDetailsScreen extends StatelessWidget {
   final Lesson lesson;
@@ -10,20 +11,9 @@ class LessonDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-        ),
-        title: const Text(
-          'Lesson',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-        ),
+        leading: const AppBackButton(),
+        title: const Text('Lesson'),
         actions: [
           IconButton(
             onPressed: () {
