@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-// A card used to display one football news article.
+// A card used to display one football news article. Shared by the
+// News screen's supporting-story list and Home's local search
+// results - [category] and [sourceName] are optional additions used
+// by News; Home's call site doesn't pass them, so its appearance is
+// unaffected beyond the shared visual refresh.
 class NewsCard extends StatelessWidget {
   final String title;
   final String timeAgo;
 
   // Optional short description shown under the title.
   final String? description;
+
+  // Optional category label shown above the title (e.g. "Transfers").
+  final String? category;
+
+  // Optional source name shown before the time (e.g. "BBC Sport").
+  final String? sourceName;
 
   // Optional icon shown on the left. Defaults to a plain article icon.
   // Used as a fallback when there is no [imageUrl], or it fails to load.
@@ -25,6 +35,8 @@ class NewsCard extends StatelessWidget {
     required this.title,
     required this.timeAgo,
     this.description,
+    this.category,
+    this.sourceName,
     this.icon = Icons.article_outlined,
     this.imageUrl,
     this.onTap,
@@ -32,15 +44,18 @@ class NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardRadius = BorderRadius.circular(14);
+    final cardRadius = BorderRadius.circular(16);
 
     final cardContent = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: AppColors.surfaceElevated,
         borderRadius: cardRadius,
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,33 +66,43 @@ class NewsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (category != null) ...[
+                  Text(
+                    category!.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.accentPink,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Text(
                   title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textWarm,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    height: 1.25,
                   ),
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textMuted,
                       fontSize: 12,
                     ),
                   ),
                 ],
                 const SizedBox(height: 6),
-                Text(
-                  timeAgo,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                _buildMeta(),
               ],
             ),
           ),
@@ -101,6 +126,55 @@ class NewsCard extends StatelessWidget {
     );
   }
 
+  // Source + time when a source is available, otherwise just the time
+  // - matches the previous (Home) behavior exactly when no source is
+  // passed.
+  Widget _buildMeta() {
+    if (sourceName == null || sourceName!.isEmpty) {
+      return Text(
+        timeAgo,
+        style: const TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            sourceName!,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          width: 3,
+          height: 3,
+          decoration: const BoxDecoration(
+            color: AppColors.textMuted,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          timeAgo,
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
   // Builds the leading thumbnail: a real image when [imageUrl] is
   // available, falling back to the existing icon box otherwise - or
   // if the image fails to load.
@@ -110,12 +184,14 @@ class NewsCard extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Image.network(
         imageUrl!,
-        width: 56,
-        height: 56,
+        width: 92,
+        height: 92,
         fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : _buildIconBox(),
         errorBuilder: (context, error, stackTrace) => _buildIconBox(),
       ),
     );
@@ -124,16 +200,16 @@ class NewsCard extends StatelessWidget {
   // The existing icon-box visual fallback.
   Widget _buildIconBox() {
     return Container(
-      width: 56,
-      height: 56,
+      width: 92,
+      height: 92,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.accentPink.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
         icon,
-        color: AppColors.primary,
-        size: 26,
+        color: AppColors.accentPink,
+        size: 28,
       ),
     );
   }

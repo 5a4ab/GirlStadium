@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/article.dart';
 import '../services/news_service.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/featured_news_card.dart';
 import '../widgets/news_card.dart';
 import 'news_details_screen.dart';
 
@@ -71,6 +73,13 @@ class _NewsScreenState extends State<NewsScreen> {
         .toList();
   }
 
+  void _openArticle(Article article) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => NewsDetailsScreen(article: article)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -78,130 +87,18 @@ class _NewsScreenState extends State<NewsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App bar with title and search icon.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Football News',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: AppColors.textPrimary,
-                      size: 22,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Featured news card.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.campaign,
-                            color: AppColors.primary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.error,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Breaking News',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Mbappé scores twice as Real Madrid wins season opener',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Real Madrid started the season in style, with Kylian '
-                          'Mbappé netting a brace to secure a comfortable win '
-                          'at the Santiago Bernabéu.',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '2 hours ago',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
+            _buildHeader(),
 
             // Category chips.
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: _buildCategoryChips(),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 80),
+              child: SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: _buildCategoryChips(),
+                ),
               ),
             ),
 
@@ -210,13 +107,67 @@ class _NewsScreenState extends State<NewsScreen> {
             // News feed.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildArticlesContent(),
+              child: FadeSlideIn(
+                delay: const Duration(milliseconds: 140),
+                child: _buildArticlesContent(),
+              ),
             ),
 
             const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  // An editorial header - the same warm-white/muted language used
+  // across the redesigned app, with a small pink glow for depth.
+  Widget _buildHeader() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          top: -30,
+          right: -30,
+          child: Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.accentPink.withValues(alpha: 0.16),
+                  AppColors.accentPink.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Latest Stories',
+                style: TextStyle(
+                  color: AppColors.textWarm,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Football news, without the noise.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -246,48 +197,67 @@ class _NewsScreenState extends State<NewsScreen> {
 
   // Decides what to show in the news feed area: a loading spinner, an
   // error message with a retry button, an empty state (no articles at
-  // all, or none matching the selected category), or the article
-  // cards.
+  // all, or none matching the selected category), or the featured
+  // story plus supporting article cards.
   Widget _buildArticlesContent() {
     if (_isLoading) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
+        padding: EdgeInsets.symmetric(vertical: 50),
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: AppColors.accentPink),
         ),
       );
     }
 
     if (_errorMessage != null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: AppColors.error,
-              size: 36,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                color: AppColors.error,
+                size: 30,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 18),
+            Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _loadArticles,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: AppColors.heroGradient),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              onPressed: _loadArticles,
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -295,71 +265,91 @@ class _NewsScreenState extends State<NewsScreen> {
     }
 
     if (_articles.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.article_outlined,
-              color: AppColors.textSecondary,
-              size: 36,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'No news available',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'There is no news to show right now.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyState(
+        icon: Icons.article_outlined,
+        title: 'No news available',
+        subtitle: 'There is no news to show right now.',
       );
     }
 
     final filteredArticles = _filteredArticles;
 
     if (filteredArticles.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text(
-          'No articles in this category',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.dynamic_feed_outlined,
+        title: 'No stories here yet',
+        subtitle: 'Try another category.',
       );
     }
 
+    final featured = filteredArticles.first;
+    final supporting = filteredArticles.skip(1).toList();
+
     return Column(
-      children: filteredArticles.map((article) {
-        return NewsCard(
-          title: article.title,
-          description: article.description,
-          timeAgo: article.timeAgo,
-          icon: article.icon,
-          imageUrl: article.imageUrl,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => NewsDetailsScreen(article: article),
-              ),
+      children: [
+        FeaturedArticleCard(
+          article: featured,
+          onTap: () => _openArticle(featured),
+        ),
+        if (supporting.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          ...supporting.map((article) {
+            return NewsCard(
+              title: article.title,
+              category: article.category,
+              sourceName: article.sourceName,
+              timeAgo: article.timeAgo,
+              icon: article.icon,
+              imageUrl: article.imageUrl,
+              onTap: () => _openArticle(article),
             );
-          },
-        );
-      }).toList(),
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 30),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.borderLavender.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Icon(icon, color: AppColors.textMuted, size: 28),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textWarm,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -381,16 +371,35 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.card,
+          gradient: isSelected
+              ? const LinearGradient(colors: AppColors.heroGradient)
+              : null,
+          color: isSelected ? null : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : AppColors.borderLavender.withValues(alpha: 0.4),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentPink.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+            color: isSelected ? Colors.white : AppColors.textMuted,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),

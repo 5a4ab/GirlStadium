@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../models/article.dart';
 import '../widgets/app_back_button.dart';
+import '../widgets/fade_slide_in.dart';
 
 class NewsDetailsScreen extends StatelessWidget {
   final Article article;
@@ -34,185 +35,79 @@ class NewsDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('News'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // No functionality yet.
-            },
-            icon: const Icon(
-              Icons.bookmark_border,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 12),
 
-              // Large rounded article image, falling back to a
-              // polished GirlStadium placeholder when unavailable.
-              _buildHeroImage(),
+              FadeSlideIn(child: _buildHero()),
 
-              const SizedBox(height: 16),
-
-              // Category badge.
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  article.category,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Headline - the strongest text on the page.
-              Text(
-                article.title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  height: 1.3,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Source and time.
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      article.sourceName ?? 'GirlStadium News',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: const BoxDecoration(
-                      color: AppColors.textSecondary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    article.timeAgo,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
               // Description - GNews provides this even when content
               // is truncated, so it's shown as a short lead-in.
-              if (article.description.trim().isNotEmpty) ...[
-                Text(
-                  article.description,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    height: 1.5,
+              if (article.description.trim().isNotEmpty)
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 80),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      article.description,
+                      style: const TextStyle(
+                        color: AppColors.textWarm,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.55,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
 
               // Available content - only whatever GNews actually
               // provided. Never fabricated, and skipped entirely
               // when there's nothing beyond the description.
               if (_hasDistinctContent)
-                ...article.content.map((paragraph) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Text(
-                      paragraph,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        height: 1.6,
-                      ),
-                    ),
-                  );
-                }),
-
-              // Preview notice + Read Full Article action - only for
-              // real GNews articles (they have a source URL). Local
-              // static articles already contain their full content,
-              // so neither of these apply to them.
-              if (_hasSourceUrl) ...[
-                const SizedBox(height: 4),
-                const Text(
-                  "You're viewing an article preview.",
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Read the full story from the original publisher.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.textPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => _handleReadFullArticle(context),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.open_in_new, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'Read Full Article',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: article.content.map((paragraph) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Text(
+                          paragraph,
+                          style: const TextStyle(
+                            color: AppColors.textWarm,
+                            fontSize: 15,
+                            height: 1.6,
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
                 ),
-              ],
+
+              // Preview notice + full-story action - only for real
+              // GNews articles (they have a source URL). Local static
+              // articles already contain their full content, so
+              // neither applies to them.
+              if (_hasSourceUrl)
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 160),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      _buildPreviewNotice(),
+                      const SizedBox(height: 20),
+                      _buildCopyLinkButton(context),
+                    ],
+                  ),
+                ),
 
               const SizedBox(height: 24),
             ],
@@ -222,12 +117,94 @@ class NewsDetailsScreen extends StatelessWidget {
     );
   }
 
+  // A short callout explaining that this is a preview, not the full
+  // story - with more specific wording when GNews actually truncated
+  // the content (article.isTruncated), so the app never implies a
+  // full article was loaded when it wasn't.
+  Widget _buildPreviewNotice() {
+    final message = article.isTruncated
+        ? 'This preview is shortened. Open the original story to read '
+            'the full article.'
+        : "You're viewing an article preview. Read the full story from "
+            'the original publisher.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.accentViolet.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            color: AppColors.accentViolet,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // The project has no URL-launching package (no url_launcher, no
-  // platform channel) and this milestone explicitly forbids adding
-  // one automatically. Copying the link uses Flutter's built-in
-  // Clipboard API (part of the SDK, not a package) so the button is
-  // genuinely functional rather than a no-op.
-  void _handleReadFullArticle(BuildContext context) {
+  // platform channel) so this only copies the link to the clipboard -
+  // the label and icon say exactly that, rather than implying it
+  // opens a browser.
+  Widget _buildCopyLinkButton(BuildContext context) {
+    final radius = BorderRadius.circular(12);
+
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _handleCopyLink(context),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: AppColors.heroGradient),
+            ),
+            alignment: Alignment.center,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.link_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Copy Article Link',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleCopyLink(BuildContext context) {
     final url = article.articleUrl;
     if (url == null || url.isEmpty) return;
 
@@ -241,55 +218,128 @@ class NewsDetailsScreen extends StatelessWidget {
     );
   }
 
-  // Builds the article hero image: a controlled rounded image
-  // (~170-190px tall, full content width, not full-bleed) when a
-  // real GNews image is available, falling back to a polished
-  // GirlStadium placeholder card of the same size otherwise or on
-  // load failure.
+  // The article hero: a large image (or branded fallback), category
+  // badge, headline, and source/time.
+  Widget _buildHero() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: _buildHeroImage(),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: AppColors.heroGradient),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            article.category.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          article.title,
+          style: const TextStyle(
+            color: AppColors.textWarm,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                article.sourceName ?? 'GirlStadium News',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 4,
+              height: 4,
+              decoration: const BoxDecoration(
+                color: AppColors.textMuted,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              article.timeAgo,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Builds the article hero image: a large rounded image, full
+  // content width, when a real GNews image is available, falling
+  // back to a polished GirlStadium placeholder of the same size
+  // otherwise or on load failure.
   Widget _buildHeroImage() {
-    const double height = 180;
+    const double height = 220;
 
     if (article.imageUrl == null || article.imageUrl!.isEmpty) {
       return _buildHeroFallback(height);
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        article.imageUrl!,
-        width: double.infinity,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildHeroFallback(height),
-      ),
+    return Image.network(
+      article.imageUrl!,
+      width: double.infinity,
+      height: height,
+      fit: BoxFit.cover,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) return child;
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: const Duration(milliseconds: 300),
+          child: child,
+        );
+      },
+      errorBuilder: (context, error, stackTrace) =>
+          _buildHeroFallback(height),
     );
   }
 
-  // A rounded, card-colored placeholder matching the hero image's
+  // A rounded, gradient placeholder matching the hero image's
   // footprint, with a centered icon - used whenever there's no real
   // image to show, so the layout never leaves an empty gap.
   Widget _buildHeroFallback(double height) {
     return Container(
       width: double.infinity,
       height: height,
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppColors.heroGradient,
+        ),
       ),
       child: Center(
-        child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            article.icon,
-            color: AppColors.primary,
-            size: 32,
-          ),
+        child: Icon(
+          article.icon,
+          color: Colors.white.withValues(alpha: 0.4),
+          size: 56,
         ),
       ),
     );
