@@ -22,8 +22,11 @@ class SegmentedControl extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surfaceBase,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         children: options.map(_buildOption).toList(),
@@ -38,21 +41,33 @@ class SegmentedControl extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onSelected(option),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
             padding: const EdgeInsets.symmetric(vertical: 10),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
+              gradient: isSelected
+                  ? const LinearGradient(colors: AppColors.heroGradient)
+                  : null,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.accentPink.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
             child: Text(
               option,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isSelected ? Colors.white : AppColors.textMuted,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),

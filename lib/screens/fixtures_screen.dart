@@ -125,11 +125,11 @@ class _FixturesScreenState extends State<FixturesScreen> {
           children: [
             // Screen title.
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 20),
               child: Text(
                 'Fixtures',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.textWarm,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
@@ -168,9 +168,12 @@ class _FixturesScreenState extends State<FixturesScreen> {
                     _fixtures = _filterByLeague(_rawFixtures);
                   });
                 },
-                color: AppColors.card,
+                color: AppColors.surfaceElevated,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: AppColors.borderLavender.withValues(alpha: 0.4),
+                  ),
                 ),
                 itemBuilder: (context) {
                   return _leagueIds.keys.map((league) {
@@ -178,31 +181,41 @@ class _FixturesScreenState extends State<FixturesScreen> {
                       value: league,
                       child: Text(
                         league,
-                        style: const TextStyle(color: AppColors.textPrimary),
+                        style: const TextStyle(color: AppColors.textWarm),
                       ),
                     );
                   }).toList();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.surface),
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.borderLavender.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.emoji_events_outlined,
-                        color: AppColors.primary,
-                        size: 18,
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: AppColors.heroGradient),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _selectedLeague,
                           style: const TextStyle(
-                            color: AppColors.textPrimary,
+                            color: AppColors.textWarm,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -210,7 +223,7 @@ class _FixturesScreenState extends State<FixturesScreen> {
                       ),
                       const Icon(
                         Icons.keyboard_arrow_down,
-                        color: AppColors.textSecondary,
+                        color: AppColors.textMuted,
                       ),
                     ],
                   ),
@@ -239,43 +252,62 @@ class _FixturesScreenState extends State<FixturesScreen> {
   Widget _buildFixturesContent() {
     if (_isLoading) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
+        padding: EdgeInsets.symmetric(vertical: 50),
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: AppColors.accentPink),
         ),
       );
     }
 
     if (_errorMessage != null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: AppColors.error,
-              size: 36,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                color: AppColors.error,
+                size: 30,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 18),
+            Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _loadFixtures,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: AppColors.heroGradient),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              onPressed: _loadFixtures,
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -284,19 +316,30 @@ class _FixturesScreenState extends State<FixturesScreen> {
 
     if (_fixtures.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: [
-            const Icon(
-              Icons.sports_soccer_outlined,
-              color: AppColors.textSecondary,
-              size: 36,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.borderLavender.withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Icon(
+                Icons.sports_soccer_outlined,
+                color: AppColors.textMuted,
+                size: 28,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const Text(
               'No fixtures found',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textWarm,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -306,7 +349,7 @@ class _FixturesScreenState extends State<FixturesScreen> {
               'There are no matches scheduled for the selected date and league.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 13,
               ),
             ),

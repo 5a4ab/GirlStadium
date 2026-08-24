@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 // A widget that shows one match statistic as two values with a
-// split progress bar in between (e.g. Possession 58% vs 42%).
+// split progress bar in between (e.g. Possession 58% vs 42%). The
+// home side is pink, the away side is violet.
 class StatBar extends StatelessWidget {
   final String label;
   final String leftValue;
@@ -21,8 +22,13 @@ class StatBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Flex values out of 1000 for finer precision than a 0-100 split,
+    // each clamped to at least 1 so Expanded never gets a zero flex.
+    final leftFlex = (leftRatio * 1000).round().clamp(1, 999);
+    final rightFlex = 1000 - leftFlex;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -32,7 +38,7 @@ class StatBar extends StatelessWidget {
               Text(
                 leftValue,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.textWarm,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -40,14 +46,14 @@ class StatBar extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
+                  color: AppColors.textMuted,
+                  fontSize: 12,
                 ),
               ),
               Text(
                 rightValue,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.textWarm,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -60,18 +66,12 @@ class StatBar extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  flex: (leftRatio * 100).round(),
-                  child: Container(
-                    height: 6,
-                    color: AppColors.primary,
-                  ),
+                  flex: leftFlex,
+                  child: Container(height: 7, color: AppColors.accentPink),
                 ),
                 Expanded(
-                  flex: (100 - (leftRatio * 100).round()),
-                  child: Container(
-                    height: 6,
-                    color: AppColors.card,
-                  ),
+                  flex: rightFlex,
+                  child: Container(height: 7, color: AppColors.accentViolet),
                 ),
               ],
             ),

@@ -63,6 +63,7 @@ class MatchDetails {
   final int fixtureId;
   final String leagueName;
   final String? leagueLogo;
+  final String? round;
   final int? homeTeamId;
   final String homeTeamName;
   final String? homeTeamLogo;
@@ -82,6 +83,7 @@ class MatchDetails {
     required this.fixtureId,
     required this.leagueName,
     this.leagueLogo,
+    this.round,
     this.homeTeamId,
     required this.homeTeamName,
     this.homeTeamLogo,
@@ -166,6 +168,7 @@ class MatchDetails {
       fixtureId: fixtureJson?['id'] as int? ?? 0,
       leagueName: leagueJson?['name'] as String? ?? 'Unknown League',
       leagueLogo: leagueJson?['logo'] as String?,
+      round: leagueJson?['round'] as String?,
       homeTeamId: homeTeamJson?['id'] as int?,
       homeTeamName: homeTeamJson?['name'] as String? ?? 'TBD',
       homeTeamLogo: homeTeamJson?['logo'] as String?,
