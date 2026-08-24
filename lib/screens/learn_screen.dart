@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/lesson.dart';
 import '../constants/lessons_data.dart';
-import '../widgets/learn_card.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/lesson_card.dart';
 import 'lesson_details_screen.dart';
 
 class LearnScreen extends StatefulWidget {
@@ -37,6 +38,13 @@ class _LearnScreenState extends State<LearnScreen> {
         .toList();
   }
 
+  void _openLesson(Lesson lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => LessonDetailsScreen(lesson: lesson)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -44,117 +52,157 @@ class _LearnScreenState extends State<LearnScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App bar with title and search icon.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Learn Football',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: AppColors.textPrimary,
-                      size: 22,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(),
 
-            // Introduction card.
+            // Beginner CTA.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary,
-                      AppColors.secondary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'New to football?',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Learn football step by step with short and simple lessons.',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.textPrimary,
-                        foregroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {
-                        // No functionality yet.
-                      },
-                      child: const Text(
-                        'Start Learning',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: FadeSlideIn(child: _buildBeginnerCta()),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
             // Category chips.
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: _buildCategoryChips(),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 80),
+              child: SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: _buildCategoryChips(),
+                ),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Lessons list.
+            // Lessons grid / empty state.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildLessonsContent(),
+              child: FadeSlideIn(
+                delay: const Duration(milliseconds: 140),
+                child: _buildLessonsContent(),
+              ),
             ),
 
             const SizedBox(height: 20),
           ],
+        ),
+      ),
+    );
+  }
+
+  // A short, editorial-feeling header - the same warm-white/muted
+  // language used across the redesigned app, with a small pink glow
+  // for a bit of depth.
+  Widget _buildHeader() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          top: -30,
+          left: -30,
+          child: Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.accentPink.withValues(alpha: 0.16),
+                  AppColors.accentPink.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Learn Football 💗',
+                style: TextStyle(
+                  color: AppColors.textWarm,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Simple. Clear. Easy to understand.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // The beginner-guide banner. Tapping it opens the first lesson in
+  // the local lesson list - the natural starting point.
+  Widget _buildBeginnerCta() {
+    final radius = BorderRadius.circular(20);
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: lessons.isEmpty ? null : () => _openLesson(lessons.first),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: AppColors.heroGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: radius,
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'New to Football?',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Start with our beginner guide',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -184,60 +232,73 @@ class _LearnScreenState extends State<LearnScreen> {
     return chips;
   }
 
-  // Decides what to show below the category chips: the filtered
-  // lesson cards, or a simple empty state when no lesson matches the
-  // selected category.
+  // Decides what to show below the category chips: a two-column grid
+  // of visual lesson cards, or a designed empty state when no lesson
+  // matches the selected category.
   Widget _buildLessonsContent() {
     final filteredLessons = _filteredLessons;
 
     if (filteredLessons.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 30),
-        child: Center(
-          child: Column(
-            children: [
-              const Icon(
-                Icons.menu_book_outlined,
-                color: AppColors.textSecondary,
-                size: 36,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'No lessons available',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.borderLavender.withValues(alpha: 0.4),
                 ),
               ),
-            ],
-          ),
+              child: const Icon(
+                Icons.menu_book_outlined,
+                color: AppColors.textMuted,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Nothing here yet',
+              style: TextStyle(
+                color: AppColors.textWarm,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'More beginner lessons are coming to this category.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return Column(
-      children: filteredLessons.asMap().entries.map((entry) {
-        final isLast = entry.key == filteredLessons.length - 1;
-        final lesson = entry.value;
-        return Padding(
-          padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-          child: LearnCard(
-            title: lesson.title,
-            description: lesson.description,
-            readTime: lesson.readTime,
-            icon: lesson.icon,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => LessonDetailsScreen(lesson: lesson),
-                ),
-              );
-            },
-          ),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: filteredLessons.length,
+      itemBuilder: (context, index) {
+        final lesson = filteredLessons[index];
+        return LessonCard(
+          lesson: lesson,
+          onTap: () => _openLesson(lesson),
         );
-      }).toList(),
+      },
     );
   }
 }
@@ -259,16 +320,35 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.card,
+          gradient: isSelected
+              ? const LinearGradient(colors: AppColors.heroGradient)
+              : null,
+          color: isSelected ? null : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : AppColors.borderLavender.withValues(alpha: 0.4),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentPink.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+            color: isSelected ? Colors.white : AppColors.textMuted,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
