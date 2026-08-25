@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "784920159644",
+    "project_id": "girlstaduim",
+    "storage_bucket": "girlstaduim.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784920159644:android:04dcb1a586937da6b11459",
+        "android_client_info": {
+          "package_name": "com.example.girlstadium.girlstadium"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzCwJoCboDbVCuyrCiJEsgLtElaIV0rqc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
