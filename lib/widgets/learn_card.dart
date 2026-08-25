@@ -30,10 +30,13 @@ class LearnCard extends StatelessWidget {
 
     final cardContent = Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: AppColors.surfaceElevated,
         borderRadius: cardRadius,
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,12 +45,12 @@ class LearnCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.15),
+              color: AppColors.accentPink.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: AppColors.secondary,
+              color: AppColors.accentPink,
               size: 26,
             ),
           ),
@@ -59,7 +62,7 @@ class LearnCard extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textWarm,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -69,7 +72,7 @@ class LearnCard extends StatelessWidget {
                   Text(
                     description!,
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textMuted,
                       fontSize: 12,
                     ),
                   ),
@@ -78,7 +81,7 @@ class LearnCard extends StatelessWidget {
                 Text(
                   readTime,
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -88,7 +91,7 @@ class LearnCard extends StatelessWidget {
           ),
           const Icon(
             Icons.chevron_right,
-            color: AppColors.textSecondary,
+            color: AppColors.textMuted,
           ),
         ],
       ),

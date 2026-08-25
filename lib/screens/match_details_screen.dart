@@ -88,14 +88,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('Match Details'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // No functionality yet.
-            },
-            icon: const Icon(Icons.share_outlined, color: AppColors.textPrimary),
-          ),
-        ],
       ),
       body: SafeArea(child: _buildBody()),
     );
@@ -122,7 +114,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     if (_matchDetails == null) {
       return _buildMessageState(
         icon: Icons.info_outline,
-        iconColor: AppColors.textSecondary,
+        iconColor: AppColors.textMuted,
         title: 'Match details unavailable',
         subtitle: 'No details are available for this match right now.',
         showRetry: false,
