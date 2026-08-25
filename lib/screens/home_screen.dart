@@ -3,15 +3,12 @@ import '../theme/app_colors.dart';
 import '../models/fixture.dart';
 import '../models/lesson.dart';
 import '../models/article.dart';
-import '../models/player.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
-import '../constants/api_constants.dart';
+import '../services/news_service.dart';
 import '../constants/lessons_data.dart';
-import '../constants/news_data.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/fade_slide_in.dart';
-import '../widgets/featured_player_card.dart';
 import '../widgets/home_background.dart';
 import '../widgets/match_card.dart';
 import '../widgets/fixture_card.dart';
@@ -33,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FootballService _footballService = FootballService();
+  final NewsService _newsService = NewsService();
 
   // The Premier League - same league ID used on the Fixtures and
   // Standings screens.
@@ -42,17 +40,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _errorMessage;
   List<Fixture> _fixtures = [];
 
-  // The player featured on Home. Mohamed Salah's API-Football player
-  // ID - only the ID is hardcoded, the rest of the card's content
-  // (name, club, nationality, photo) comes from the real API response.
-  static const int _featuredPlayerId = 306;
+  // News state is tracked independently from fixtures, so a failure or
+  // slow load in one section never affects the other.
+  bool _isNewsLoading = true;
+  String? _newsErrorMessage;
+  List<Article> _articles = [];
 
-  bool _isFeaturedPlayerLoading = true;
-  String? _featuredPlayerErrorMessage;
-  Player? _featuredPlayer;
-
-  // Local search - filters the local lessons/articles lists only.
-  // No API request is involved in searching.
+  // Local search - filters the local lessons list and the real GNews
+  // articles already loaded into `_articles` above. No API request is
+  // involved in searching.
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
@@ -62,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadFixtures();
-    _loadFeaturedPlayer();
+    _loadNews();
     _searchFocusNode.addListener(() {
       setState(() => _searchFocused = _searchFocusNode.hasFocus);
     });
@@ -75,13 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Works out the football season year expected by the API. Matches
-  // the same calculation used on the Fixtures screen.
-  int _currentSeason() {
-    final now = DateTime.now();
-    return now.month >= 7 ? now.year : now.year - 1;
-  }
-
   // Formats a DateTime as 'YYYY-MM-DD', which is what the API expects.
   String _formatDate(DateTime date) {
     final year = date.year.toString().padLeft(4, '0');
@@ -90,9 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$year-$month-$day';
   }
 
-  // Requests today's fixtures from the API. Makes exactly ONE request -
-  // the result is then split locally into "live" and "upcoming" for
-  // the two Home sections below, so no extra requests are needed.
+  // Requests today's fixtures from the API using the same date-only
+  // strategy as FixturesScreen: no `league` and no `season` sent,
+  // since the current API plan rejects the current season when
+  // filtering by league. The response covers every league for today,
+  // so it's filtered locally down to the Premier League, then split
+  // further into "live" and "upcoming" for the two Home sections
+  // below. Exactly ONE request either way.
   Future<void> _loadFixtures() async {
     setState(() {
       _isLoading = true;
@@ -102,11 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final result = await _footballService.getFixtures(
         date: _formatDate(DateTime.now()),
-        leagueId: _leagueId,
-        season: _currentSeason(),
       );
       setState(() {
-        _fixtures = result;
+        _fixtures =
+            result.where((fixture) => fixture.leagueId == _leagueId).toList();
         _isLoading = false;
       });
     } catch (error) {
@@ -121,36 +113,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Requests the Home featured player from the API. Makes exactly one
-  // request - triggered once in initState(), independent of the
-  // fixtures request above, so a slow/failed lookup never blocks the
-  // rest of Home.
-  Future<void> _loadFeaturedPlayer() async {
+  // Requests real GNews articles through NewsService, independent of
+  // the fixtures request above so a slow/failed news load never
+  // blocks the rest of Home. Prefers NewsService's shared cache -
+  // triggered once in initState() - unless [forceRefresh] is set,
+  // which is only ever used by an explicit Retry tap.
+  Future<void> _loadNews({bool forceRefresh = false}) async {
     setState(() {
-      _isFeaturedPlayerLoading = true;
-      _featuredPlayerErrorMessage = null;
+      _isNewsLoading = true;
+      _newsErrorMessage = null;
     });
 
     try {
-      final result = await _footballService.getPlayerProfile(
-        playerId: _featuredPlayerId,
-        // The Free plan only has data access for this season - reuse
-        // the same season used for Standings.
-        season: ApiConstants.standingsSeason,
-      );
+      final result = await _newsService.getArticles(forceRefresh: forceRefresh);
       setState(() {
-        _featuredPlayer = result;
-        _isFeaturedPlayerLoading = false;
+        _articles = result;
+        _isNewsLoading = false;
       });
     } catch (error) {
       setState(() {
-        _featuredPlayerErrorMessage = apiErrorMessage(
-          error,
-          planMessage:
-              "The featured player isn't available on your current API plan.",
-          genericMessage: "Couldn't load the featured player right now.",
-        );
-        _isFeaturedPlayerLoading = false;
+        _newsErrorMessage = newsErrorMessage(error);
+        _isNewsLoading = false;
       });
     }
   }
@@ -172,14 +155,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  // Articles matching the current search query (title or description).
-  // Purely local filtering over news_data.dart - no API request.
+  // Articles matching the current search query (title, description,
+  // category, or source). Purely local filtering over the GNews
+  // articles already loaded into `_articles` - no new request, even
+  // if this runs before `_loadNews()` has finished (it simply
+  // searches whatever `_articles` currently holds).
   List<Article> get _matchingArticles {
     if (_searchQuery.isEmpty) return [];
     final query = _searchQuery.toLowerCase();
-    return articles.where((article) {
+    return _articles.where((article) {
       return article.title.toLowerCase().contains(query) ||
-          article.description.toLowerCase().contains(query);
+          article.description.toLowerCase().contains(query) ||
+          article.category.toLowerCase().contains(query) ||
+          (article.sourceName?.toLowerCase().contains(query) ?? false);
     }).toList();
   }
 
@@ -302,28 +290,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 28),
 
-              // Featured Player section. Loads real API data once in
-              // initState(), independent of the fixtures request above.
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 80),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionHeader(
-                        title: 'Featured Player',
-                        icon: Icons.star_rounded,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildFeaturedPlayerSection(),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
               // Learn Football section.
               FadeSlideIn(
                 delay: const Duration(milliseconds: 140),
@@ -343,76 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  // Decides what to show for the Featured Player section: a small
-  // loading indicator, a simple fallback message, or the real
-  // FeaturedPlayerCard - all inside a stable-height container so the
-  // section's footprint stays stable while loading.
-  Widget _buildFeaturedPlayerSection() {
-    if (_isFeaturedPlayerLoading) {
-      return Container(
-        width: double.infinity,
-        height: 200,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceBase,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: const Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.accentPink,
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_featuredPlayerErrorMessage != null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceBase,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Text(
-          _featuredPlayerErrorMessage!,
-          style: const TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    if (_featuredPlayer == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceBase,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: const Text(
-          'No featured player available right now.',
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    return FeaturedPlayerCard(
-      playerName: _featuredPlayer!.name,
-      clubName: _featuredPlayer!.team ?? '-',
-      nationality: _featuredPlayer!.nationality ?? '-',
-      photoUrl: _featuredPlayer!.photo,
     );
   }
 
@@ -468,8 +364,11 @@ class _HomeScreenState extends State<HomeScreen> {
               return NewsCard(
                 title: article.title,
                 description: article.description,
+                category: article.category,
+                sourceName: article.sourceName,
                 timeAgo: article.timeAgo,
                 icon: article.icon,
+                imageUrl: article.imageUrl,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -659,24 +558,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Builds the "Latest News" preview: the first article as one large
-  // featured story and the next two as smaller supporting cards.
-  // Purely local data (news_data.dart) - no additional GNews request.
+  // Builds the "Latest Stories" preview: the first loaded GNews
+  // article as one large featured story and the next two as smaller
+  // supporting cards. Backed by NewsService's shared cache - loaded
+  // once in initState(), independent of the fixtures request above,
+  // so a slow/failed news load never blocks the rest of Home.
   Widget _buildNewsSection() {
-    if (articles.isEmpty) return const SizedBox.shrink();
-
-    final featured = articles.first;
-    final supporting = articles.skip(1).take(2).toList();
-
-    void openArticle(Article article) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NewsDetailsScreen(article: article),
-        ),
-      );
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -687,35 +574,113 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.newspaper_rounded,
           ),
           const SizedBox(height: 12),
-          FeaturedNewsCard(
-            title: featured.title,
-            category: featured.category,
-            timeAgo: featured.timeAgo,
-            icon: featured.icon,
-            gradient: AppColors.accentGradientForIndex(0),
-            onTap: () => openArticle(featured),
-          ),
-          if (supporting.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ...List.generate(supporting.length, (index) {
-              final article = supporting[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: index == supporting.length - 1 ? 0 : 10,
-                ),
-                child: NewsPreviewCard(
-                  title: article.title,
-                  category: article.category,
-                  timeAgo: article.timeAgo,
-                  icon: article.icon,
-                  gradient: AppColors.accentGradientForIndex(index + 1),
-                  onTap: () => openArticle(article),
-                ),
-              );
-            }),
-          ],
+          _buildNewsContent(),
         ],
       ),
+    );
+  }
+
+  // Decides what to show below the "Latest Stories" header: a loading
+  // spinner, an error message with a retry button (bypassing the
+  // shared cache), an empty state, or the featured + supporting cards
+  // built from the already-loaded articles.
+  Widget _buildNewsContent() {
+    if (_isNewsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 30),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.accentPink),
+        ),
+      );
+    }
+
+    if (_newsErrorMessage != null) {
+      return Column(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: AppColors.error,
+            size: 36,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _newsErrorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPink,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => _loadNews(forceRefresh: true),
+            child: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+
+    if (_articles.isEmpty) {
+      return const Text(
+        'No news available right now.',
+        style: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 13,
+        ),
+      );
+    }
+
+    final featured = _articles.first;
+    final supporting = _articles.skip(1).take(2).toList();
+
+    void openArticle(Article article) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NewsDetailsScreen(article: article),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        FeaturedNewsCard(
+          title: featured.title,
+          category: featured.category,
+          timeAgo: featured.timeAgo,
+          icon: featured.icon,
+          imageUrl: featured.imageUrl,
+          gradient: AppColors.accentGradientForIndex(0),
+          onTap: () => openArticle(featured),
+        ),
+        if (supporting.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...List.generate(supporting.length, (index) {
+            final article = supporting[index];
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == supporting.length - 1 ? 0 : 10,
+              ),
+              child: NewsPreviewCard(
+                title: article.title,
+                category: article.category,
+                timeAgo: article.timeAgo,
+                icon: article.icon,
+                imageUrl: article.imageUrl,
+                gradient: AppColors.accentGradientForIndex(index + 1),
+                onTap: () => openArticle(article),
+              ),
+            );
+          }),
+        ],
+      ],
     );
   }
 }

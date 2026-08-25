@@ -16,6 +16,13 @@ class FeaturedNewsCard extends StatelessWidget {
   final List<Color> gradient;
   final VoidCallback onTap;
 
+  // Optional real article image. When provided, it's shown as the
+  // card's backdrop (with a gradient scrim so the overlaid text stays
+  // readable) instead of the flat gradient fill. Falls back to the
+  // existing gradient + faint icon look when null, empty, or the image
+  // fails to load - the card's size/padding/text layout never changes.
+  final String? imageUrl;
+
   const FeaturedNewsCard({
     super.key,
     required this.title,
@@ -24,7 +31,10 @@ class FeaturedNewsCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     required this.onTap,
+    this.imageUrl,
   });
+
+  bool get _hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -41,25 +51,55 @@ class FeaturedNewsCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: _hasImage
+                ? null
+                : LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
             borderRadius: cardRadius,
           ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Positioned(
-                right: -12,
-                bottom: -14,
-                child: Icon(
-                  icon,
-                  size: 92,
-                  color: Colors.white.withValues(alpha: 0.12),
+              if (_hasImage) ...[
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: cardRadius,
+                    child: Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _fallbackBackdrop(),
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null ? child : _fallbackBackdrop(),
+                    ),
+                  ),
                 ),
-              ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: cardRadius,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0xE60B0918)],
+                        stops: [0.3, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ] else
+                Positioned(
+                  right: -12,
+                  bottom: -14,
+                  child: Icon(
+                    icon,
+                    size: 92,
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
+                ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -111,6 +151,20 @@ class FeaturedNewsCard extends StatelessWidget {
       ),
     );
   }
+
+  // The same gradient + faint icon look used when there's no image,
+  // reused as the backdrop while the image loads or if it fails.
+  Widget _fallbackBackdrop() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+    );
+  }
 }
 
 // A smaller supporting story card shown below the featured one.
@@ -122,6 +176,11 @@ class NewsPreviewCard extends StatelessWidget {
   final List<Color> gradient;
   final VoidCallback onTap;
 
+  // Optional real article image. When provided, it's shown in place of
+  // the gradient icon box - falling back to it when null, empty, or
+  // the image fails to load.
+  final String? imageUrl;
+
   const NewsPreviewCard({
     super.key,
     required this.title,
@@ -130,6 +189,7 @@ class NewsPreviewCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     required this.onTap,
+    this.imageUrl,
   });
 
   @override
@@ -155,15 +215,7 @@ class NewsPreviewCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: gradient),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
-              ),
+              _buildThumbnail(),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -204,6 +256,40 @@ class NewsPreviewCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // The leading visual: a real thumbnail when [imageUrl] is available,
+  // falling back to the existing gradient icon box otherwise - or if
+  // the image fails to load.
+  Widget _buildThumbnail() {
+    if (imageUrl == null || imageUrl!.isEmpty) {
+      return _buildIconBox();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUrl!,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : _buildIconBox(),
+        errorBuilder: (context, error, stackTrace) => _buildIconBox(),
+      ),
+    );
+  }
+
+  Widget _buildIconBox() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: gradient),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 }

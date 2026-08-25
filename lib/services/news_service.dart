@@ -65,14 +65,57 @@ String newsErrorMessage(Object error) {
 class NewsService {
   static const String _baseUrl = 'https://gnews.io/api/v4';
 
-  // Returns a list of football news articles from GNews. Makes
-  // exactly one network request.
+  // A simple in-memory cache shared by every NewsService instance
+  // (static), so Home and NewsScreen never make two independent GNews
+  // requests for the same data. Only ever holds a *successful* result -
+  // a failed request is never cached, so a later call can try again.
+  // Cleared only by process restart; there is no timer/expiry.
+  static List<Article>? _cachedArticles;
+
+  // Tracks a request already in progress, so a second caller that asks
+  // while one is still running awaits the same Future instead of
+  // starting a duplicate GNews call.
+  static Future<List<Article>>? _inFlightRequest;
+
+  // Returns a list of football news articles from GNews.
+  //
+  // Prefers the shared cache when available. When [forceRefresh] is
+  // true (used by explicit Retry taps), the cache is bypassed and
+  // exactly one fresh request is made, replacing the cache on success.
   //
   // Throws a [NewsException] if the API key is missing, the request
   // fails, or the response can't be parsed. Never falls back to the
   // local static articles automatically - a failed request stays
   // visibly failed so it can be diagnosed.
-  Future<List<Article>> getArticles() async {
+  Future<List<Article>> getArticles({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = _cachedArticles;
+      if (cached != null) return cached;
+
+      final inFlight = _inFlightRequest;
+      if (inFlight != null) return inFlight;
+    }
+
+    final request = _fetchArticles();
+    _inFlightRequest = request;
+
+    try {
+      final result = await request;
+      _cachedArticles = result;
+      return result;
+    } finally {
+      // Only clear the slot if it's still our own request - a
+      // concurrent forceRefresh call may have already replaced it with
+      // a newer one.
+      if (identical(_inFlightRequest, request)) {
+        _inFlightRequest = null;
+      }
+    }
+  }
+
+  // Makes the actual GNews request. Exactly one network request per
+  // call - only ever called from [getArticles] above.
+  Future<List<Article>> _fetchArticles() async {
     // The API key is read from .env (loaded via flutter_dotenv in
     // main.dart) and is never written directly in source code.
     final apiKey = dotenv.env['GNEWS_API_KEY'];

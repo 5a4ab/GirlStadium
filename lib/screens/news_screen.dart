@@ -40,17 +40,20 @@ class _NewsScreenState extends State<NewsScreen> {
     _loadArticles();
   }
 
-  // Loads articles through NewsService. Makes exactly one GNews
-  // request per load/retry - never automatically, and never more
-  // than once per call.
-  Future<void> _loadArticles() async {
+  // Loads articles through NewsService. Prefers the shared cache
+  // (populated by whichever screen - Home or News - asks first), so
+  // opening News after Home already loaded successfully makes 0
+  // additional GNews requests. An explicit Retry passes
+  // [forceRefresh] so a stale successful cache never blocks a request
+  // the user actually asked for.
+  Future<void> _loadArticles({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final result = await _newsService.getArticles();
+      final result = await _newsService.getArticles(forceRefresh: forceRefresh);
       setState(() {
         _articles = result;
         _isLoading = false;
@@ -242,7 +245,7 @@ class _NewsScreenState extends State<NewsScreen> {
               borderRadius: BorderRadius.circular(14),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: _loadArticles,
+                onTap: () => _loadArticles(forceRefresh: true),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
                   decoration: const BoxDecoration(
