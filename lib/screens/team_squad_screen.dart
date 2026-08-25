@@ -4,16 +4,24 @@ import '../models/player.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
 import '../widgets/app_back_button.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/player_card.dart';
 
 class TeamSquadScreen extends StatefulWidget {
   final int teamId;
   final String teamName;
 
+  // Optional - passed straight through from Team Details when
+  // available, so the header can show the crest without an extra
+  // network request. Safe to omit (e.g. if this screen is ever
+  // opened from elsewhere without a logo on hand).
+  final String? teamLogo;
+
   const TeamSquadScreen({
     super.key,
     required this.teamId,
     required this.teamName,
+    this.teamLogo,
   });
 
   @override
@@ -76,7 +84,7 @@ class _TeamSquadScreenState extends State<TeamSquadScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: CircularProgressIndicator(color: AppColors.accentPink),
       );
     }
 
@@ -92,8 +100,8 @@ class _TeamSquadScreenState extends State<TeamSquadScreen> {
     if (_players.isEmpty) {
       return _buildMessageState(
         icon: Icons.groups_outlined,
-        iconColor: AppColors.textSecondary,
-        title: 'No squad information available',
+        iconColor: AppColors.textMuted,
+        title: 'No squad available',
         subtitle: 'There are no players listed for this team right now.',
         showRetry: false,
       );
@@ -103,37 +111,103 @@ class _TeamSquadScreenState extends State<TeamSquadScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-          child: Text(
-            widget.teamName,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          child: FadeSlideIn(child: _buildHeader()),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.78,
+          child: FadeSlideIn(
+            delay: const Duration(milliseconds: 80),
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.72,
+              ),
+              itemCount: _players.length,
+              itemBuilder: (context, index) {
+                final player = _players[index];
+                return PlayerCard(
+                  name: player.name,
+                  photo: player.photo,
+                  position: player.position,
+                  number: player.number,
+                );
+              },
             ),
-            itemCount: _players.length,
-            itemBuilder: (context, index) {
-              final player = _players[index];
-              return PlayerCard(
-                name: player.name,
-                photo: player.photo,
-                position: player.position,
-              );
-            },
           ),
         ),
       ],
+    );
+  }
+
+  // The squad header: crest (if available), team name, and player
+  // count - all from data already on hand, no extra request.
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        _buildCrest(),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.teamName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textWarm,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '${_players.length} player${_players.length == 1 ? '' : 's'} · Squad',
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCrest() {
+    const double size = 52;
+    final logoUrl = widget.teamLogo;
+
+    Widget placeholder() => const Icon(
+          Icons.shield_outlined,
+          color: AppColors.textMuted,
+          size: 24,
+        );
+
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.45),
+        ),
+      ),
+      child: logoUrl == null || logoUrl.isEmpty
+          ? placeholder()
+          : Image.network(
+              logoUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => placeholder(),
+              loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : placeholder(),
+            ),
     );
   }
 
@@ -152,13 +226,21 @@ class _TeamSquadScreenState extends State<TeamSquadScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: iconColor, size: 40),
-            const SizedBox(height: 12),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 30),
+            ),
+            const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textWarm,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -169,23 +251,34 @@ class _TeamSquadScreenState extends State<TeamSquadScreen> {
                 subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textMuted,
                   fontSize: 13,
                 ),
               ),
             ],
             if (showRetry) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 18),
+              Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: _loadSquad,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: AppColors.heroGradient),
+                    ),
+                    child: const Text(
+                      'Retry',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                onPressed: _loadSquad,
-                child: const Text('Retry'),
               ),
             ],
           ],

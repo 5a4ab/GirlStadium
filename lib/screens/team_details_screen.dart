@@ -5,7 +5,9 @@ import '../models/player.dart';
 import '../services/api_service.dart';
 import '../services/football_service.dart';
 import '../widgets/app_back_button.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/player_card.dart';
+import '../widgets/section_header.dart';
 import 'team_squad_screen.dart';
 
 class TeamDetailsScreen extends StatefulWidget {
@@ -100,7 +102,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: CircularProgressIndicator(color: AppColors.accentPink),
       );
     }
 
@@ -116,8 +118,8 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
     if (_team == null) {
       return _buildMessageState(
         icon: Icons.info_outline,
-        iconColor: AppColors.textSecondary,
-        title: 'Team details unavailable',
+        iconColor: AppColors.textMuted,
+        title: 'Team information unavailable',
         subtitle: 'No information is available for this team right now.',
         showRetry: false,
       );
@@ -130,105 +132,41 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 8),
+
+          FadeSlideIn(child: _buildHero(team)),
+
           const SizedBox(height: 16),
 
-          // Team logo and name.
-          Center(
-            child: Column(
-              children: [
-                _buildLogo(team.logo),
-                const SizedBox(height: 14),
-                Text(
-                  team.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 60),
+            child: _buildQuickInfo(team),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
 
-          // Team info card.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 110),
+            child: _buildStadiumSection(team),
+          ),
+
+          const SizedBox(height: 22),
+
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 160),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Club Info',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SectionHeader(
+                  title: 'Top Players',
+                  icon: Icons.stars_outlined,
+                  subtitle: 'A first look at the squad.',
                 ),
                 const SizedBox(height: 14),
-                _buildInfoRow('Country', team.country ?? '-'),
-                const SizedBox(height: 10),
-                _buildInfoRow('Founded', team.founded?.toString() ?? '-'),
+                _buildTopPlayersSection(team),
               ],
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Stadium info card.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Stadium',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _buildInfoRow('Name', team.venueName ?? '-'),
-                const SizedBox(height: 10),
-                _buildInfoRow('City', team.venueCity ?? '-'),
-                const SizedBox(height: 10),
-                _buildInfoRow('Address', team.venueAddress ?? '-'),
-                const SizedBox(height: 10),
-                _buildInfoRow(
-                  'Capacity',
-                  team.venueCapacity?.toString() ?? '-',
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Top Players section.
-          const Text(
-            'Top Players',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildTopPlayersSection(team),
 
           const SizedBox(height: 20),
         ],
@@ -236,14 +174,333 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
     );
   }
 
+  // The club-profile hero: a large crest on a layered gradient
+  // backdrop with a subtle pink/violet glow, the team name, and a
+  // compact country/founded caption. Uses only real team data.
+  Widget _buildHero(Team team) {
+    final metaParts = <String>[
+      if (team.country != null && team.country!.isNotEmpty) team.country!,
+      if (team.founded != null) 'Founded ${team.founded}',
+    ];
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceBase,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.35),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: -50,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.accentPink.withValues(alpha: 0.18),
+                    AppColors.accentPink.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+            child: Column(
+              children: [
+                _buildCrest(team.logo),
+                const SizedBox(height: 16),
+                Text(
+                  team.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textWarm,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (metaParts.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    metaParts.join(' · '),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // The large club crest, on a tonal circular backdrop. Falls back to
+  // a placeholder icon if there's no logo URL or it fails to load.
+  Widget _buildCrest(String? logoUrl) {
+    const double size = 96;
+
+    Widget placeholder() => const Icon(
+          Icons.shield_outlined,
+          color: AppColors.textMuted,
+          size: 44,
+        );
+
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.5),
+        ),
+      ),
+      child: logoUrl == null || logoUrl.isEmpty
+          ? placeholder()
+          : Image.network(
+              logoUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => placeholder(),
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.accentPink,
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  // A compact at-a-glance strip: Country / Founded / Stadium, as
+  // three equal tonal tiles.
+  Widget _buildQuickInfo(Team team) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickInfoTile(
+            icon: Icons.flag_outlined,
+            label: 'Country',
+            value: team.country ?? '-',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildQuickInfoTile(
+            icon: Icons.calendar_today_outlined,
+            label: 'Founded',
+            value: team.founded?.toString() ?? '-',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildQuickInfoTile(
+            icon: Icons.stadium_outlined,
+            label: 'Stadium',
+            value: team.venueName ?? '-',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickInfoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.borderLavender.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.accentPink, size: 17),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textWarm,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // The "Home Ground" section: stadium name, city, capacity, and
+  // address, using only fields the API actually returned.
+  Widget _buildStadiumSection(Team team) {
+    final hasVenueData = team.venueName != null ||
+        team.venueCity != null ||
+        team.venueAddress != null ||
+        team.venueCapacity != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Home Ground',
+          icon: Icons.stadium_outlined,
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.borderLavender.withValues(alpha: 0.35),
+            ),
+          ),
+          child: !hasVenueData
+              ? const Text(
+                  'No stadium information available.',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.venueName ?? 'Stadium',
+                      style: const TextStyle(
+                        color: AppColors.textWarm,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (team.venueCity != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            color: AppColors.textMuted,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            team.venueCity!,
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (team.venueCapacity != null) ...[
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Capacity',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _formatCapacity(team.venueCapacity!),
+                        style: const TextStyle(
+                          color: AppColors.textWarm,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                    if (team.venueAddress != null &&
+                        team.venueAddress!.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Address',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        team.venueAddress!,
+                        style: const TextStyle(
+                          color: AppColors.textWarm,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Formats a capacity number with thousands separators (e.g.
+  // "53,400"), without needing an extra package.
+  String _formatCapacity(int capacity) {
+    final digits = capacity.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      final remaining = digits.length - i;
+      if (i > 0 && remaining % 3 == 0) buffer.write(',');
+      buffer.write(digits[i]);
+    }
+    return buffer.toString();
+  }
+
   // Builds the horizontally scrollable "Top Players" preview, with a
-  // "View All Players" button when there are more than 5 players.
+  // "View All Players" CTA when there are more than 5 players.
   Widget _buildTopPlayersSection(Team team) {
     if (_isSquadLoading) {
       return const SizedBox(
-        height: 140,
+        height: 160,
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: AppColors.accentPink),
         ),
       );
     }
@@ -251,7 +508,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
     if (_players.isEmpty) {
       return const Text(
         'No player information available.',
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        style: TextStyle(color: AppColors.textMuted, fontSize: 13),
       );
     }
 
@@ -261,7 +518,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 140,
+          height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: topPlayers.length,
@@ -269,125 +526,69 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
             itemBuilder: (context, index) {
               final player = topPlayers[index];
               return SizedBox(
-                width: 100,
+                width: 116,
                 child: PlayerCard(
                   name: player.name,
                   photo: player.photo,
                   position: player.position,
+                  number: player.number,
                 ),
               );
             },
           ),
         ),
         if (_players.length > 5) ...[
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TeamSquadScreen(
-                      teamId: widget.teamId,
-                      teamName: team.name,
-                    ),
-                  ),
-                );
-              },
-              child: const Text(
-                'View All Players',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildViewAllPlayersButton(team),
         ],
       ],
     );
   }
 
-  // Builds the circular team logo, falling back to a placeholder
-  // icon if there's no logo URL or it fails to load.
-  Widget _buildLogo(String? logoUrl) {
-    const double size = 84;
-
-    if (logoUrl == null || logoUrl.isEmpty) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.shield_outlined,
-          color: AppColors.textSecondary,
-          size: 40,
-        ),
-      );
-    }
-
-    return ClipOval(
-      child: Container(
-        width: size,
-        height: size,
-        color: AppColors.card,
-        padding: const EdgeInsets.all(12),
-        child: Image.network(
-          logoUrl,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.shield_outlined,
-              color: AppColors.textSecondary,
-              size: 40,
-            );
-          },
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.primary,
+  // The "View All Players" CTA - opens Team Squad with the current
+  // team ID and name, unchanged navigation behavior.
+  Widget _buildViewAllPlayersButton(Team team) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TeamSquadScreen(
+                teamId: widget.teamId,
+                teamName: team.name,
+                teamLogo: team.logo,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: AppColors.heroGradient),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'View All Players',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            );
-          },
+              SizedBox(width: 6),
+              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  // Builds one label/value row used in the info cards.
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-          ),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -406,13 +607,21 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: iconColor, size: 40),
-            const SizedBox(height: 12),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 30),
+            ),
+            const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textWarm,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -423,23 +632,34 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
                 subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textMuted,
                   fontSize: 13,
                 ),
               ),
             ],
             if (showRetry) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 18),
+              Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: _loadTeamDetails,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: AppColors.heroGradient),
+                    ),
+                    child: const Text(
+                      'Retry',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                onPressed: _loadTeamDetails,
-                child: const Text('Retry'),
               ),
             ],
           ],
