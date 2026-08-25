@@ -4,19 +4,27 @@ import '../models/fixture.dart';
 
 // A card that shows one football fixture: both teams (with logos)
 // and the score/time/status appropriate for its current state
-// (upcoming, live, or finished). The league isn't repeated on the
-// card itself - callers only ever show fixtures already filtered to
-// one league, so that context lives in the filter above the list.
+// (upcoming, live, or finished). By default the league isn't repeated
+// on the card - callers that already filter to one league (like
+// FixturesScreen) leave that context above the list. Callers that mix
+// leagues (like Home) can opt in via [showLeague].
 class FixtureCard extends StatelessWidget {
   final Fixture fixture;
 
   // Optional tap callback. When null, the card is not tappable.
   final VoidCallback? onTap;
 
+  // When true, shows the fixture's league name next to the status
+  // badge - for contexts where matches from multiple leagues are
+  // shown together. Defaults to false so existing callers are
+  // unaffected.
+  final bool showLeague;
+
   const FixtureCard({
     super.key,
     required this.fixture,
     this.onTap,
+    this.showLeague = false,
   });
 
   // Scores are only shown once the match has actually kicked off -
@@ -54,7 +62,7 @@ class FixtureCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Align(
+          showLeague ? _buildHeaderWithLeague() : Align(
             alignment: Alignment.centerRight,
             child: _buildStatusBadge(),
           ),
@@ -158,6 +166,29 @@ class FixtureCard extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: logo,
+    );
+  }
+
+  // League name (left) plus the same status pill (right), used when
+  // [showLeague] is true so a mixed-league list stays understandable.
+  Widget _buildHeaderWithLeague() {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            fixture.league,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _buildStatusBadge(),
+      ],
     );
   }
 

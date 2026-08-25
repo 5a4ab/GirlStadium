@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../constants/api_constants.dart';
 import '../models/fixture.dart';
 import '../models/lesson.dart';
 import '../models/article.dart';
@@ -32,9 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final FootballService _footballService = FootballService();
   final NewsService _newsService = NewsService();
 
-  // The Premier League - same league ID used on the Fixtures and
-  // Standings screens.
-  static const int _leagueId = 39;
+  // The four domestic leagues shown on Home - Champions League is
+  // deliberately excluded from this section. Reuses the same league
+  // ID mapping as Fixtures and Standings.
+  static final Set<int> _leagueIds = ApiConstants.homeLeagueIds;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -83,9 +85,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // strategy as FixturesScreen: no `league` and no `season` sent,
   // since the current API plan rejects the current season when
   // filtering by league. The response covers every league for today,
-  // so it's filtered locally down to the Premier League, then split
-  // further into "live" and "upcoming" for the two Home sections
-  // below. Exactly ONE request either way.
+  // so it's filtered locally down to the four domestic leagues, then
+  // split into "live" and "other" for the two Home sections below.
+  // Exactly ONE request either way.
   Future<void> _loadFixtures() async {
     setState(() {
       _isLoading = true;
@@ -97,8 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
         date: _formatDate(DateTime.now()),
       );
       setState(() {
-        _fixtures =
-            result.where((fixture) => fixture.leagueId == _leagueId).toList();
+        _fixtures = result
+            .where((fixture) => _leagueIds.contains(fixture.leagueId))
+            .toList();
         _isLoading = false;
       });
     } catch (error) {
@@ -141,8 +144,18 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Fixture> get _liveFixtures =>
       _fixtures.where((fixture) => fixture.isLive).toList();
 
-  List<Fixture> get _upcomingFixtures =>
-      _fixtures.where((fixture) => fixture.isUpcoming).toList();
+  // Everything for today that isn't currently live - upcoming and
+  // finished matches alike, so a mixed-league "Today's Matches" list
+  // doesn't silently drop results that have already kicked off and
+  // finished. Ordered by kickoff time.
+  List<Fixture> get _otherFixtures {
+    final fixtures = _fixtures.where((fixture) => !fixture.isLive).toList();
+    fixtures.sort((a, b) {
+      if (a.dateTime == null || b.dateTime == null) return 0;
+      return a.dateTime!.compareTo(b.dateTime!);
+    });
+    return fixtures;
+  }
 
   // Lessons matching the current search query (title or description).
   // Purely local filtering over lessons_data.dart - no API request.
@@ -388,8 +401,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Decides what to show for the football data area: a loading
-  // spinner, an error message with a retry button, or the Live &
-  // Upcoming sections built from the same request.
+  // spinner, an error message with a retry button, or today's
+  // matches from the four domestic leagues built from the same
+  // request.
   Widget _buildFootballSection() {
     if (_isLoading) {
       return const Padding(
@@ -437,7 +451,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final liveFixtures = _liveFixtures;
-    final upcomingFixtures = _upcomingFixtures;
+    final otherFixtures = _otherFixtures;
+
+    if (liveFixtures.isEmpty && otherFixtures.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(
+              title: "Today's Matches",
+              icon: Icons.bolt_rounded,
+              subtitle: 'Premier League, La Liga, Serie A & Bundesliga',
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'No matches in your leagues today',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,10 +483,10 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: SectionHeader(
-            title: 'Live & Upcoming',
+            title: "Today's Matches",
             icon: Icons.bolt_rounded,
             subtitle: liveFixtures.isEmpty
-                ? "Today's Premier League fixtures"
+                ? 'Premier League, La Liga, Serie A & Bundesliga'
                 : '${liveFixtures.length} match${liveFixtures.length == 1 ? '' : 'es'} live now',
           ),
         ),
@@ -478,34 +516,28 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
         ],
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: upcomingFixtures.isEmpty
-              ? const Text(
-                  'No upcoming fixtures',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 13,
-                  ),
-                )
-              : Column(
-                  children: upcomingFixtures.map((fixture) {
-                    return FixtureCard(
-                      fixture: fixture,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MatchDetailsScreen(
-                              fixtureId: fixture.id,
-                            ),
-                          ),
-                        );
-                      },
+        if (otherFixtures.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: otherFixtures.map((fixture) {
+                return FixtureCard(
+                  fixture: fixture,
+                  showLeague: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MatchDetailsScreen(
+                          fixtureId: fixture.id,
+                        ),
+                      ),
                     );
-                  }).toList(),
-                ),
-        ),
+                  },
+                );
+              }).toList(),
+            ),
+          ),
       ],
     );
   }

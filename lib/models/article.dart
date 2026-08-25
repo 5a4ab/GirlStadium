@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-// A simple model representing one football news article. Articles
-// can come from local static data (see lib/constants/news_data.dart)
-// or from the real GNews API (see lib/services/news_service.dart).
+// A simple model representing one football news article, populated
+// from the real GNews API (see lib/services/news_service.dart).
 class Article {
   final String id;
   final String title;

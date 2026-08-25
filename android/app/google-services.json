@@ -12,7 +12,20 @@
           "package_name": "com.example.girlstadium.girlstadium"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "784920159644-m7nu8efsb66u60u0nq6lj42v9g6urtqu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.girlstadium.girlstadium",
+            "certificate_hash": "5798efe850686f8d78227e9dce3e5b4d2e0ad9a3"
+          }
+        },
+        {
+          "client_id": "784920159644-43h4846gr5ks4hasjdk1660ihv5ea3io.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAzCwJoCboDbVCuyrCiJEsgLtElaIV0rqc"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "784920159644-43h4846gr5ks4hasjdk1660ihv5ea3io.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

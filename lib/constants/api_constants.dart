@@ -14,6 +14,14 @@ class ApiConstants {
     'Bundesliga': 78,
   };
 
+  // The four domestic leagues shown in Home's "Today's Matches" section -
+  // supportedLeagues minus Champions League, derived rather than
+  // re-listing the IDs so there's still only one place they're defined.
+  static final Set<int> homeLeagueIds = {
+    for (final entry in supportedLeagues.entries)
+      if (entry.key != 'Champions League') entry.value,
+  };
+
   // The season used for Standings requests. This is a fixed value
   // (not calculated from the current date) because the API-Football
   // Free plan only returns standings data for this season. Do not

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/fade_slide_in.dart';
-import 'intro_screen.dart';
+import 'auth_gate.dart';
 
 // The first screen shown when the app opens: a short branded
-// transition before Intro. Makes no API requests.
+// transition before AuthGate decides where to route the user. Makes no
+// API requests.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,12 +17,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Wait 2 seconds, then go to the Intro screen.
+    // Wait 2 seconds, then hand off to AuthGate, which decides whether to
+    // show Intro (signed out) or NavigationScreen (signed in).
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const IntroScreen()),
+          MaterialPageRoute(builder: (context) => const AuthGate()),
         );
       }
     });

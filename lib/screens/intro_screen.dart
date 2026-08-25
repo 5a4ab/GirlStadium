@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/fade_slide_in.dart';
-import 'navigation_screen.dart';
+import 'sign_in_screen.dart';
 
 // The welcome screen shown after Splash: a full-bleed hero image with
 // GirlStadium's branding, headline, and the Get Started CTA. Makes no
@@ -113,10 +113,13 @@ class IntroScreen extends StatelessWidget {
                     delay: const Duration(milliseconds: 200),
                     child: _GetStartedButton(
                       onTap: () {
-                        Navigator.pushReplacement(
+                        // Pushed (not replaced) - AuthGate stays as the
+                        // first route, so a successful sign-in can pop
+                        // straight back to it via popUntil(isFirst).
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NavigationScreen(),
+                            builder: (context) => const SignInScreen(),
                           ),
                         );
                       },
