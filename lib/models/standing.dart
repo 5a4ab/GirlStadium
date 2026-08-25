@@ -5,6 +5,7 @@ class Standing {
   final int position;
   final int? teamId;
   final String teamName;
+  final String? teamLogo;
   final int played;
   final int goalDifference;
   final int points;
@@ -14,6 +15,7 @@ class Standing {
     required this.position,
     required this.teamId,
     required this.teamName,
+    this.teamLogo,
     required this.played,
     required this.goalDifference,
     required this.points,
@@ -30,6 +32,7 @@ class Standing {
       position: json['rank'] as int? ?? 0,
       teamId: teamJson?['id'] as int?,
       teamName: teamJson?['name'] as String? ?? 'Unknown Team',
+      teamLogo: teamJson?['logo'] as String?,
       played: allJson?['played'] as int? ?? 0,
       goalDifference: json['goalsDiff'] as int? ?? 0,
       points: json['points'] as int? ?? 0,
